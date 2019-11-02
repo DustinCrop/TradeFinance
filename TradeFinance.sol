@@ -1,43 +1,6 @@
 pragma solidity ^0.5.11;
 
-contract Whitelist {
-    address payable public buyer = msg.sender;
-    uint256 public minimumAmount;
-    uint256 x = 1000000000000000000;
-    address payable public financier;
-    
-    constructor() public {
-        msg.sender == buyer;
-    }
-    
-    mapping(address => bool) public whitelisted;
-
-    modifier onlyBuyer {
-        require(msg.sender == buyer);
-        _;
-    }
-
-    function setMinimumAmount(uint256 _minimumAmount) public onlyBuyer {
-        minimumAmount = _minimumAmount * x;
-    }
-
-    function addWhitelist(address _financier) public onlyBuyer {
-        require(_financier.balance >= minimumAmount);
-        whitelisted[_financier] = true;
-    }
-    
-    function whitelistAddress(address[] memory financiers) public onlyBuyer {
-        for (uint i = 0; i < financiers.length; i++) {
-            whitelisted[financiers[i]] = true;
-        }
-    }
-    
-    function removeWhitelist(address _financier) public onlyBuyer {
-        whitelisted[_financier] = false;
-    }
-}
-
-contract TradeFinance is Whitelist {
+contract TradeFinance {
     uint256 public time;
     uint256 internal price;
     uint256 internal quantity;
