@@ -1,6 +1,7 @@
 pragma solidity ^0.5.11;
 
 contract TradeFinance {
+
     uint256 public time;
     uint256 internal price;
     uint256 internal quantity;
