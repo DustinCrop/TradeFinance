@@ -76,7 +76,7 @@ contract TradeFinance {
         bool isOrder;
     }
     
-    struct BillOfLading {
+    struct EBillOfLading {
         bytes32 billAddress;
         string shippingmode;
     }
