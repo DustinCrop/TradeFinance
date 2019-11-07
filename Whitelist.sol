@@ -1,5 +1,7 @@
 pragma solidity ^0.5.11;
 
+import ""
+
 contract Whitelist {
     
     using SafeMath for uint256;
