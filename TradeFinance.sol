@@ -4,8 +4,6 @@ contract TradeFinance {
     
     using SafeMath for uint256;
     
-//import "github.com/Smart0tter/TradeFinance/blob/master/Whitelist.sol" as Whitelist;
-    
     bytes32 internal priceSeller;
     bytes32 internal quantitySeller;
     bytes32 internal priceBuyer;
