@@ -11,15 +11,14 @@ contract TradeFinance {
     bytes32 internal quantitySeller;
     bytes32 internal priceBuyer;
     bytes32 internal quantityBuyer;
-    bytes32 internal orderAmountSeller;
-    bytes32 internal orderAmountBuyer;
-    //uint256 internal orderDate;
+    uint256 internal orderAmountSeller;
+    uint256 internal orderAmountBuyer;
     uint256 y = 1000000000000000000;
     string internal productname;
-    //string internal date1;
+    uint256 internal weight;
     string internal shippingmode;
     uint256 internal freightrate;
-    //uint256 internal taxrate;
+    uint256 internal customsDuty;
     bytes32 public orderAddress;
     bytes32 public guaranteeAddress;
     bytes32 internal billAddress;
@@ -29,7 +28,8 @@ contract TradeFinance {
     address payable public buyer;
     address payable public freight;
     address payable public customs;
-    //address payable public financier;
+    address a = address(0);
+    uint256 internal salt;
     
     event OrderCancelled(string description);
     
@@ -48,7 +48,6 @@ contract TradeFinance {
     event GuaranteeInactive(string description);
 
     enum OrderState { Negotiation, Created, Locked, Freight, Customs, Received, Cancelled }
-    //OrderState public orderstate;
 
     enum GuaranteeState { Inactive, Active }
     GuaranteeState public guaranteestate;
@@ -77,12 +76,10 @@ contract TradeFinance {
         bytes32 quantitySeller;
         uint256 weight;
         string productname;
-        //string shippingmode;
         uint256 freightrate;
-        //uint256 orderDate;
-        bytes32 orderAmountSeller;
+        uint256 orderAmountSeller;
         OrderState orderstate;
-        uint256 taxrate;
+        uint256 customsDuty;
         bytes32 guarantee;
         bool isOrder;
     }
@@ -128,70 +125,65 @@ contract TradeFinance {
         _;
     }
     
-    function access(address payable _buyer, address payable _freight, address payable _customs, bytes32 _orderAddress) public onlySeller {
+    function access(address payable _buyer, address payable _freight, address payable _customs, bytes32 _orderAddress, uint256 _salt) public onlySeller {
         require(orders[_orderAddress].orderstate == OrderState.Negotiation);
         buyer = _buyer;
         freight = _freight;
         customs = _customs;
+        salt = _salt;
     }
     
-    function addOrder(bytes32 _orderAddress, address payable _seller, address payable _buyer, bytes32 _priceSeller, bytes32 _quantitySeller,
-        string memory _productname, uint256 _freightrate, bytes32 _orderAmountSeller, uint256 _taxrate) public onlySeller {
-        require(orders[_orderAddress].orderstate == OrderState.Negotiation, "Error: Order cannot modified anymore!"); //remove for multiple use!
+    function addOrder(bytes32 _orderAddress, address payable _seller, address payable _buyer, bytes32 _priceSeller, bytes32 _quantitySeller, uint256 _weight,
+        string memory _productname, uint256 _freightrate, uint256 _orderAmountSeller, uint256 _customsDuty) public onlySeller {
+        require(orders[_orderAddress].orderstate == OrderState.Negotiation, "Error: Order cannot modified anymore!");
         if(isOrder(_orderAddress)) revert();
         orders[_orderAddress].orderAddress = _orderAddress;
-        //orders[_orderAddress].isOrder = true;
+        orders[_orderAddress].isOrder = true;
         orders[_orderAddress].orderstate = OrderState.Negotiation;
         orders[_orderAddress].seller = _seller;
-        //orders[_orderAddress].isOrder = true;
         orders[_orderAddress].buyer = _buyer;
-        //orders[_orderAddress].isOrder = true;
         orders[_orderAddress].priceSeller = _priceSeller;
-        //orders[_orderAddress].isOrder = true;
         orders[_orderAddress].quantitySeller = _quantitySeller;
-        //orders[_orderAddress].isOrder = true;
+        orders[_orderAddress].weight = _weight;
         orders[_orderAddress].productname = _productname;
-        //orders[_orderAddress].isOrder = true;
-        //orders[_orderAddress].shippingmode = _shippingmode;
-        //orders[_orderAddress].isOrder = true;
         orders[_orderAddress].freightrate = _freightrate;
-        //orders[_orderAddress].isOrder = true;
-        //orders[_orderAddress].orderDate = _orderDate;
-        //orders[_orderAddress].isOrder = true;
-        orders[_orderAddress].orderAmountSeller = _orderAmountSeller;
-        //orders[_orderAddress].isOrder = true;
-        orders[_orderAddress].taxrate = _taxrate;
-        //orders[_orderAddress].isOrder = true;
-        //orders[_orderAddress].guarantee = "";
+        orders[_orderAddress].orderAmountSeller = orderAmountSeller;
+        orders[_orderAddress].customsDuty = _customsDuty;
+        orders[_orderAddress].guarantee = "";
         ordersCount++;
         orderAddress = _orderAddress;
-        priceSeller = _priceSeller;
-        quantitySeller = _quantitySeller;
+        priceSeller = keccak256(abi.encode(_priceSeller, salt));
+        quantitySeller = keccak256(abi.encode(_quantitySeller, salt));
+        weight = _weight;
+        productname = _productname;
         freightrate = _freightrate;
-        //orderDate = _orderDate;
         orderAmountSeller = _orderAmountSeller;
-        //taxrate = _taxrate;
+        customsDuty = _customsDuty;
     }
+    
+    /*function setFinancier() public view returns(address) {
+        return 
+    }*/
     
     function isOrder(bytes32 _orderAddress) public view returns(bool) {
         return orders[_orderAddress].isOrder;
     }
     
     function cancelOrder(bytes32 _orderAddress) public inOrderState(OrderState.Negotiation) onlySeller returns(bool) {
-        require(orders[_orderAddress].orderstate == OrderState.Negotiation); // check for multiple use!
+        require(orders[_orderAddress].orderstate == OrderState.Negotiation);
         emit OrderCancelled("Order has been cancelled by the seller");
         orders[_orderAddress].orderstate = OrderState.Cancelled;
         return true;
     }
     
-    function confirmOrder(bytes32 _priceBuyer, bytes32 _quantityBuyer, bytes32 _orderAmountBuyer, bytes32 _orderAddress) public inOrderState(OrderState.Negotiation) onlyBuyer returns(bool) {
-        if (_priceBuyer == priceSeller && _quantityBuyer == quantitySeller && _orderAmountBuyer == orderAmountSeller) {
-            require(orders[_orderAddress].orderstate != OrderState.Cancelled); // check for multiple use!
+    function confirmOrder(bytes32 _priceBuyer, bytes32 _quantityBuyer, uint256 _orderAmountBuyer, bytes32 _orderAddress) public inOrderState(OrderState.Negotiation) onlyBuyer returns(bool) {
+        if (keccak256(abi.encode(_priceBuyer, salt)) == priceSeller && keccak256(abi.encode(_quantityBuyer, salt)) == quantitySeller && _orderAmountBuyer == orderAmountSeller) {
+            require(orders[_orderAddress].orderstate != OrderState.Cancelled);
             emit OrderConfirmed("Order has been confirmed by the buyer");
             orders[_orderAddress].orderstate = OrderState.Created;
             return true;
         } else {
-            emit OrderCancelled("Order has not been confirmed by the buyer"); // check for multiple use!
+            emit OrderCancelled("Order has not been confirmed by the buyer");
             orders[_orderAddress].orderstate = OrderState.Cancelled;
             return false;
         }
@@ -199,8 +191,8 @@ contract TradeFinance {
     
     function addGuarantee(bytes32 _guaranteeAddress, bytes32 _orderAddress, uint256 _issueDate, address _to) public payable {
         require(orderAddress == _orderAddress);
-        require(orders[_orderAddress].orderstate == OrderState.Created); // check for multiple use!
-        require(orders[_orderAddress].isOrder);
+        require(orders[_orderAddress].orderstate == OrderState.Created);
+        require(orders[_orderAddress].isOrder = true);
         require(msg.value > 0);
         //if(Whitelist.whitelisted[financier]) {
             if(isGuarantee(_guaranteeAddress)) revert();
@@ -231,7 +223,7 @@ contract TradeFinance {
     }
     
     function receiveOrderFreight(bytes32 _billAddress, string memory _shippingmode, bytes32 _orderAddress) public inOrderState(OrderState.Locked) onlyFreight returns(bool) {
-        require(orders[_orderAddress].orderstate == OrderState.Locked); // check for multiple use!
+        require(orders[_orderAddress].orderstate == OrderState.Locked);
         emit OrderReceivedFreight("Order arrived at Freight Company");
         orders[_orderAddress].orderstate = OrderState.Freight;
         billAddress = _billAddress;
@@ -247,23 +239,23 @@ contract TradeFinance {
     }
     
     function receiveOrderCustoms(bytes32 _orderAddress) public inOrderState(OrderState.Locked) onlyCustoms returns(bool) {
-        require(orders[_orderAddress].orderstate == OrderState.Locked); // check for multiple use!
+        require(orders[_orderAddress].orderstate == OrderState.Locked);
         emit OrderReceivedCustoms("Order arrived at Customs broker");
         orders[_orderAddress].orderstate = OrderState.Customs;
-        require(orders[_orderAddress].orderstate == OrderState.Customs); // check for multiple use!
+        require(orders[_orderAddress].orderstate == OrderState.Customs);
         require(address(this).balance > 0); 
         address(freight).transfer(freightrate.mul(y));
         return true;
     }
     
     function receiveOrder(bytes32 _orderAddress) public inOrderState(OrderState.Customs) onlyBuyer returns(bool) { 
-        require(orders[_orderAddress].orderstate == OrderState.Customs); // check for multiple use!
+        require(orders[_orderAddress].orderstate == OrderState.Customs);
         emit OrderReceived("Order arrived at the buyer"); 
-        orders[_orderAddress].orderstate = OrderState.Received; // until here receive
+        orders[_orderAddress].orderstate = OrderState.Received;
         uint256 balanceCustoms = address(this).balance;
         require(address(this).balance > 0);
-        address(customs).transfer(orders[_orderAddress].taxrate.mul(balanceCustoms.div(100))); // payout customs
-        uint256 balanceSeller = address(this).balance; // check correct amount, transaction amount instead of rest of SC 
+        address(customs).transfer(orders[_orderAddress].customsDuty.mul(balanceCustoms.div(100))); // payout customs
+        uint256 balanceSeller = address(this).balance; 
         require(address(this).balance > 0, "Error: Contract balance too low!");
         address(seller).transfer(balanceSeller); // payout seller
         emit GuaranteeInactive("Guarantee is Inactive");
@@ -271,8 +263,8 @@ contract TradeFinance {
         return true;
     }
     
-    function reset(bytes32 _orderAddress, bytes32 _guaranteeAddress) public onlySeller { // check to implement reset function instead of selfdestruct, because then can use more often!
-        // require(address(this).balance == 0, "Error: Contract balance is not zero!");
+    function reset(bytes32 _orderAddress, bytes32 _guaranteeAddress) public onlySeller {
+        require(address(this).balance == 0, "Error: Contract balance is not zero!");
         require(orders[_orderAddress].orderstate == OrderState.Received);
         buyer = address(0);
         freight = address(0);
@@ -283,6 +275,5 @@ contract TradeFinance {
         guarantees[_guaranteeAddress].to = address(0);
         guarantees[_guaranteeAddress].isGuarantee = false;
         billAddress = bytes32(0);
-        //selfdestruct(Whitelist.financier); // returns rest of funds
     }
 }
