@@ -7,8 +7,8 @@ contract Whitelist {
     using SafeMath for uint256;
     
     address payable public buyer = msg.sender;
-    uint256 public minimumAmount;
-    uint256 public minimumscore;
+    uint256 internal minimumAmount;
+    uint256 internal minimumScore;
     uint256 x = 1000000000000000000;
     address payable public financier;
     
@@ -23,14 +23,14 @@ contract Whitelist {
         _;
     }
 
-    function setMinimumRequirement(uint256 _minimumAmount, uint256 _minimumscore) public onlyBuyer {
+    function setMinimumRequirement(uint256 _minimumAmount, uint256 _minimumScore) public onlyBuyer {
         minimumAmount = _minimumAmount.mul(x);
-        minimumscore = _minimumscore;
+        minimumScore = _minimumScore;
     }
 
     function addWhitelist(address _financier, uint256 _score) public onlyBuyer { // check onlyBuyer
         require(_financier.balance >= minimumAmount);
-        require(_score >= minimumscore);
+        require(_score >= minimumScore);
         whitelisted[_financier] = true;
     }
     
