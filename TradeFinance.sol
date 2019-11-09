@@ -63,7 +63,6 @@ contract TradeFinance {
     struct Guarantee {
         bytes32 guaranteeAddress;
         bytes32 orderAddress;
-        uint256 issueDate;
         address to;
         bool isGuarantee;
     }
@@ -189,21 +188,17 @@ contract TradeFinance {
         }
     }
     
-    function addGuarantee(bytes32 _guaranteeAddress, bytes32 _orderAddress, uint256 _issueDate, address _to) public payable {
+    function addGuarantee(bytes32 _guaranteeAddress, bytes32 _orderAddress, address _to) public payable {
         require(orderAddress == _orderAddress);
         require(orders[_orderAddress].orderstate == OrderState.Created);
         require(orders[_orderAddress].isOrder = true);
-        require(msg.value > 0);
+        require(msg.value >= orderAmountSeller);
         //if(Whitelist.whitelisted[financier]) {
             if(isGuarantee(_guaranteeAddress)) revert();
             guarantees[_guaranteeAddress].guaranteeAddress = _guaranteeAddress;
             guarantees[_guaranteeAddress].isGuarantee = true;
             guarantees[_guaranteeAddress].orderAddress = _orderAddress;
-            guarantees[_guaranteeAddress].isGuarantee = true;
-            guarantees[_guaranteeAddress].issueDate = _issueDate;
-            guarantees[_guaranteeAddress].isGuarantee = true;
             guarantees[_guaranteeAddress].to = _to;
-            guarantees[_guaranteeAddress].isGuarantee = true;
             guaranteesCount++;
             orders[_orderAddress].guarantee = _guaranteeAddress; //orderAddress must equal guarantee and vice versa
             guaranteeAddress = _guaranteeAddress;
@@ -243,7 +238,7 @@ contract TradeFinance {
         emit OrderReceivedCustoms("Order arrived at Customs broker");
         orders[_orderAddress].orderstate = OrderState.Customs;
         require(orders[_orderAddress].orderstate == OrderState.Customs);
-        require(address(this).balance > 0); 
+        require(address(this).balance >= orderAmountSeller); 
         address(freight).transfer(freightrate.mul(y));
         return true;
     }
@@ -265,15 +260,15 @@ contract TradeFinance {
     
     function reset(bytes32 _orderAddress, bytes32 _guaranteeAddress) public onlySeller {
         require(address(this).balance == 0, "Error: Contract balance is not zero!");
-        require(orders[_orderAddress].orderstate == OrderState.Received);
+        require(orders[_orderAddress].orderstate == OrderState.Received || orders[_orderAddress].orderstate == OrderState.Cancelled);
         buyer = address(0);
         freight = address(0);
         customs = address(0);
         guarantees[_guaranteeAddress].guaranteeAddress = bytes32(0);
         guarantees[_guaranteeAddress].orderAddress = bytes32(0);
-        guarantees[_guaranteeAddress].issueDate = uint256(0);
         guarantees[_guaranteeAddress].to = address(0);
         guarantees[_guaranteeAddress].isGuarantee = false;
         billAddress = bytes32(0);
+        salt = 0;
     }
 }
