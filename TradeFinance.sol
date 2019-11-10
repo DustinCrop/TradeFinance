@@ -16,7 +16,10 @@ contract TradeFinance {
     uint256 y = 1000000000000000000;
     string internal productname;
     uint256 internal weight;
+    uint256 internal quantity;
     string internal shippingmode;
+    string internal origin;
+    string internal destination;
     uint256 internal freightrate;
     uint256 internal customsDuty;
     bytes32 public orderAddress;
@@ -91,6 +94,7 @@ contract TradeFinance {
         string productname;
         uint256 quantity;
         uint256 weight;
+        string origin;
         string destination;
     }
     
@@ -160,8 +164,9 @@ contract TradeFinance {
         customsDuty = _customsDuty;
     }
     
-    /*function setFinancier() public view returns(address) {
-        return 
+    /*function setFinancier() public view returns(bool) {
+        a.delegatecall(bytes4(sha3("validateFinancier(address)")), whitelisted[_financier]);
+        //return address financier;
     }*/
     
     function isOrder(bytes32 _orderAddress) public view returns(bool) {
@@ -226,11 +231,15 @@ contract TradeFinance {
         return true;
     }
     
-    function addEBillOfLading(bytes32 _billAddress, address payable _seller, address payable _buyer, string memory _shippingmode) public onlyFreight {
+    function addEBillOfLading(bytes32 _billAddress, address payable _seller, address payable _buyer, string memory _shippingmode, uint256 _quantity, uint256 _weight, string memory _origin, string memory _destination) public onlyFreight {
         billAddress = _billAddress;
-        shippingmode = _shippingmode;
         seller = _seller;
         buyer = _buyer;
+        shippingmode = _shippingmode;
+        quantity = _quantity;
+        weight = _weight;
+        origin = _origin;
+        destination = _destination;
     }
     
     function receiveOrderCustoms(bytes32 _orderAddress) public inOrderState(OrderState.Locked) onlyCustoms returns(bool) {
