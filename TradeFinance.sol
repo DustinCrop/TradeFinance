@@ -51,6 +51,7 @@ contract TradeFinance {
     event GuaranteeInactive(string description);
 
     enum OrderState { Negotiation, Created, Locked, Freight, Customs, Received, Cancelled }
+    //OrderState public orderstate;
 
     enum GuaranteeState { Inactive, Active }
     GuaranteeState public guaranteestate;
@@ -86,7 +87,7 @@ contract TradeFinance {
         bool isOrder;
     }
     
-    struct EBillOfLading {
+    /*struct EBillOfLading {
         bytes32 billAddress;
         address payable seller;
         address payable buyer;
@@ -96,7 +97,7 @@ contract TradeFinance {
         uint256 weight;
         string origin;
         string destination;
-    }
+    }*/
     
     modifier onlySeller() {
         require(msg.sender == seller);
@@ -120,6 +121,7 @@ contract TradeFinance {
     
     modifier inOrderState(OrderState _orderstate) {
         //require(orderstate == _orderstate);
+        //require(orders[orderAddress].orderstate == _orderstate);
         _;
     }
     
@@ -133,6 +135,7 @@ contract TradeFinance {
         buyer = _buyer;
         freight = _freight;
         customs = _customs;
+        orderAddress = _orderAddress;
         salt = _salt;
     }
     
@@ -150,7 +153,7 @@ contract TradeFinance {
         orders[_orderAddress].weight = _weight;
         orders[_orderAddress].productname = _productname;
         orders[_orderAddress].freightrate = _freightrate;
-        orders[_orderAddress].orderAmountSeller = orderAmountSeller;
+        orders[_orderAddress].orderAmountSeller = _orderAmountSeller;
         orders[_orderAddress].customsDuty = _customsDuty;
         orders[_orderAddress].guarantee = "";
         ordersCount++;
@@ -160,7 +163,7 @@ contract TradeFinance {
         weight = _weight;
         productname = _productname;
         freightrate = _freightrate;
-        orderAmountSeller = _orderAmountSeller;
+        orderAmountSeller = _orderAmountSeller.mul(y);
         customsDuty = _customsDuty;
     }
     
@@ -198,13 +201,14 @@ contract TradeFinance {
         require(orders[_orderAddress].orderstate == OrderState.Created);
         require(orders[_orderAddress].isOrder = true);
         require(msg.value >= orderAmountSeller);
-        //if(Whitelist.whitelisted[financier]) {
+        //if(a.delegatecall(bytes4(keccak256(abi.encode("validateFinancier(address)"))))) {
             if(isGuarantee(_guaranteeAddress)) revert();
             guarantees[_guaranteeAddress].guaranteeAddress = _guaranteeAddress;
             guarantees[_guaranteeAddress].isGuarantee = true;
             guarantees[_guaranteeAddress].orderAddress = _orderAddress;
             guarantees[_guaranteeAddress].to = _to;
             guaranteesCount++;
+            //address payable financier = msg.sender;
             orders[_orderAddress].guarantee = _guaranteeAddress; //orderAddress must equal guarantee and vice versa
             guaranteeAddress = _guaranteeAddress;
             emit GuaranteeActive("Guarantee is Active");
@@ -222,16 +226,19 @@ contract TradeFinance {
         return address(this).balance;
     }
     
-    function receiveOrderFreight(bytes32 _billAddress, string memory _shippingmode, bytes32 _orderAddress) public inOrderState(OrderState.Locked) onlyFreight returns(bool) {
+    function receiveOrderFreight(bytes32 _billAddress, string memory _shippingmode, bytes32 _orderAddress, uint256 _weight, string memory _origin, string memory _destination) public inOrderState(OrderState.Locked) onlyFreight returns(bool) {
         require(orders[_orderAddress].orderstate == OrderState.Locked);
         emit OrderReceivedFreight("Order arrived at Freight Company");
         orders[_orderAddress].orderstate = OrderState.Freight;
         billAddress = _billAddress;
         shippingmode = _shippingmode;
+        weight = _weight;
+        origin = _origin;
+        destination = _destination;
         return true;
     }
     
-    function addEBillOfLading(bytes32 _billAddress, address payable _seller, address payable _buyer, string memory _shippingmode, uint256 _quantity, uint256 _weight, string memory _origin, string memory _destination) public onlyFreight {
+    /*function addEBillOfLading(bytes32 _billAddress, address payable _seller, address payable _buyer, string memory _shippingmode, uint256 _quantity, uint256 _weight, string memory _origin, string memory _destination) public onlyFreight {
         billAddress = _billAddress;
         seller = _seller;
         buyer = _buyer;
@@ -240,7 +247,7 @@ contract TradeFinance {
         weight = _weight;
         origin = _origin;
         destination = _destination;
-    }
+    }*/
     
     function receiveOrderCustoms(bytes32 _orderAddress) public inOrderState(OrderState.Locked) onlyCustoms returns(bool) {
         require(orders[_orderAddress].orderstate == OrderState.Locked);
