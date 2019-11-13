@@ -22,8 +22,11 @@ contract TradeFinance {
     string internal destination;
     uint256 internal freightrate;
     uint256 internal customsDuty;
-    uint256 internal balanceSeller;
-    uint256 internal balanceCustoms;
+    uint256 internal balanceSeller1;
+    uint256 internal balanceSeller2;
+    uint256 internal balanceSeller3;
+    uint256 internal balanceCustoms1;
+    uint256 internal balanceCustoms2;
     bytes32 public orderAddress;
     bytes32 public guaranteeAddress;
     bytes32 internal billAddress;
@@ -34,7 +37,7 @@ contract TradeFinance {
     address payable public freight;
     address payable public customs;
     address payable public financier;
-    address whitelist = address(0);
+    address Whitelist = address(0);
     uint256 internal salt;
     
     event OrderCancelled(string description);
@@ -54,7 +57,6 @@ contract TradeFinance {
     event GuaranteeInactive(string description);
 
     enum OrderState { Negotiation, Created, Locked, Freight, Customs, Received, Cancelled }
-    OrderState public orderstate; // entfernen!
 
     enum GuaranteeState { Inactive, Active }
     GuaranteeState public guaranteestate;
@@ -89,18 +91,6 @@ contract TradeFinance {
         bytes32 guarantee;
         bool isOrder;
     }
-    
-    /*struct EBillOfLading {
-        bytes32 billAddress;
-        address payable seller;
-        address payable buyer;
-        string shippingmode;
-        string productname;
-        uint256 quantity;
-        uint256 weight;
-        string origin;
-        string destination;
-    }*/
     
     modifier onlySeller() {
         require(msg.sender == seller);
@@ -166,12 +156,14 @@ contract TradeFinance {
         productname = _productname;
         freightrate = _freightrate.mul(y);
         orderAmountSeller = _orderAmountSeller.mul(y);
-        customsDuty = _customsDuty;
+        customsDuty = _customsDuty.div(100);
     }
     
     function setFinancier(address payable _financier) public {
-        (bool success, bytes memory returnAddress) = whitelist.delegatecall(abi.encode("setFinancier(address payable)", _financier));
-    }
+        Whitelist = Whitelist(financier);
+        //(bool success, bytes memory returnAddress) = Whitelist.delegatecall(abi.encode("setFinancier(address payable)", _financier));
+        //financier = whitelist.delegatecall(abi.encode("setFinancier(address payable)", _financier));
+    } 
     
     function isOrder(bytes32 _orderAddress) public view returns(bool) {
         return orders[_orderAddress].isOrder;
@@ -201,9 +193,9 @@ contract TradeFinance {
         require(orderAddress == _orderAddress);
         require(orders[_orderAddress].orderstate == OrderState.Created);
         require(orders[_orderAddress].isOrder = true);
-        //require(whiteliste[financier] = true);
+        //require(Whitelist.whitelisted[financier] = true);
         require(msg.value >= orderAmountSeller);
-        //if(a.delegatecall(bytes4(keccak256(abi.encode("validateFinancier(address)"))))) {
+        //if() {
             if(isGuarantee(_guaranteeAddress)) revert();
             guarantees[_guaranteeAddress].guaranteeAddress = _guaranteeAddress;
             guarantees[_guaranteeAddress].isGuarantee = true;
@@ -239,17 +231,6 @@ contract TradeFinance {
         return true;
     }
     
-    /*function addEBillOfLading(bytes32 _billAddress, address payable _seller, address payable _buyer, string memory _shippingmode, uint256 _quantity, uint256 _weight, string memory _origin, string memory _destination) public onlyFreight {
-        billAddress = _billAddress;
-        seller = _seller;
-        buyer = _buyer;
-        shippingmode = _shippingmode;
-        quantity = _quantity;
-        weight = _weight;
-        origin = _origin;
-        destination = _destination;
-    }*/
-    
     function receiveOrderCustoms(bytes32 _orderAddress) public inOrderState(OrderState.Freight) onlyCustoms returns(bool) {
         require(orders[_orderAddress].orderstate == OrderState.Freight);
         emit OrderReceivedCustoms("Order arrived at Customs broker");
@@ -258,8 +239,10 @@ contract TradeFinance {
         require(address(this).balance >= orderAmountSeller); 
         address(freight).transfer(freightrate);
         require(address(this).balance >= orderAmountSeller.sub(freightrate), "Error: Contract balance too low!");
-        balanceSeller = orderAmountSeller.sub(freightrate).sub(orderAmountSeller.mul(customsDuty.div(100)));  
-        address(seller).transfer(balanceSeller); // payout seller
+        balanceSeller1 = orderAmountSeller.sub(freightrate);
+        balanceSeller2 = orderAmountSeller.mul(customsDuty);
+        balanceSeller3 = balanceSeller1.sub(balanceSeller2);
+        address(seller).transfer(balanceSeller3); // payout seller
         emit GuaranteeInactive("Guarantee is Inactive");
         guaranteestate = GuaranteeState.Inactive;
         return true;
@@ -269,10 +252,11 @@ contract TradeFinance {
         require(orders[_orderAddress].orderstate == OrderState.Customs);
         emit OrderReceived("Order arrived at the buyer"); 
         orders[_orderAddress].orderstate = OrderState.Received;
-        balanceCustoms = orderAmountSeller.sub(freightrate).sub(balanceSeller);
-        require(address(this).balance >= balanceCustoms);
-        address(customs).transfer(balanceCustoms); // payout customs
-        if(address(this).balance != 0) {
+        balanceCustoms1 = orderAmountSeller.sub(freightrate);
+        balanceCustoms2 = balanceCustoms1.sub(balanceSeller3);
+        require(address(this).balance >= balanceCustoms2);
+        address(customs).transfer(balanceCustoms2); // payout customs
+        if(address(this).balance >= 0) {
             address(financier).transfer(address(this).balance); // refund rest to financier
         }
         return true;
