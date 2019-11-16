@@ -2,7 +2,7 @@ pragma solidity ^0.5.11;
 
 import "https://github.com/Smart0tter/TradeFinance/blob/master/SafeMath.sol";
 
-contract Whitelist {
+contract WhitelistFinal {
     
     using SafeMath for uint256;
     
