@@ -38,7 +38,7 @@ contract Whitelist {
         whitelisted[_financier] = false;
     }
     
-    function setFinancier(address _financier) public onlyBuyer {
-        financier = _financier;
+    function validateFinancier(address _financier) public view onlyBuyer returns(bool){
+        return(whitelisted[_financier]);
     }
 }
