@@ -28,7 +28,7 @@ contract Whitelist {
         minimumScore = _minimumScore;
     }
 
-    function addWhitelist(address _financier, uint256 _score) public onlyBuyer { // check onlyBuyer
+    function addWhitelist(address _financier, uint256 _score) public onlyBuyer {
         require(_financier.balance >= minimumAmount);
         require(_score >= minimumScore);
         whitelisted[_financier] = true;
