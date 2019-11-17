@@ -5,6 +5,8 @@ import "https://github.com/Smart0tter/TradeFinance/blob/master/Whitelist.sol";
 
 contract TradeFinance {
     
+    Whitelist w;
+    
     using SafeMath for uint256;
     
     bytes32 internal priceSeller;
@@ -37,7 +39,6 @@ contract TradeFinance {
     address payable public freight;
     address payable public customs;
     address payable public financier;
-    address Whitelist = address(0);
     uint256 internal salt;
     
     event OrderCancelled(string description);
@@ -159,12 +160,6 @@ contract TradeFinance {
         customsDuty = _customsDuty.div(100);
     }
     
-    function setFinancier(address payable _financier) public {
-        Whitelist = Whitelist(financier);
-        //(bool success, bytes memory returnAddress) = Whitelist.delegatecall(abi.encode("setFinancier(address payable)", _financier));
-        //financier = whitelist.delegatecall(abi.encode("setFinancier(address payable)", _financier));
-    } 
-    
     function isOrder(bytes32 _orderAddress) public view returns(bool) {
         return orders[_orderAddress].isOrder;
     }
@@ -193,22 +188,21 @@ contract TradeFinance {
         require(orderAddress == _orderAddress);
         require(orders[_orderAddress].orderstate == OrderState.Created);
         require(orders[_orderAddress].isOrder = true);
-        //require(Whitelist.whitelisted[financier] = true);
+        //require(w.whitelisted[msg.sender] = true);
         require(msg.value >= orderAmountSeller);
-        //if() {
             if(isGuarantee(_guaranteeAddress)) revert();
             guarantees[_guaranteeAddress].guaranteeAddress = _guaranteeAddress;
             guarantees[_guaranteeAddress].isGuarantee = true;
             guarantees[_guaranteeAddress].orderAddress = _orderAddress;
             guarantees[_guaranteeAddress].to = _to;
             guaranteesCount++;
-            orders[_orderAddress].guarantee = _guaranteeAddress; //orderAddress must equal guarantee and vice versa
+            orders[_orderAddress].guarantee = _guaranteeAddress;
             guaranteeAddress = _guaranteeAddress;
             emit GuaranteeActive("Guarantee is Active");
             guaranteestate = GuaranteeState.Active;
+            financier = msg.sender;
             emit OrderLocked("Order payment is guaranteed by bank");
             orders[_orderAddress].orderstate = OrderState.Locked;
-        //}
     }
     
     function isGuarantee(bytes32 _guaranteeAddress) public view returns(bool) {
@@ -242,7 +236,7 @@ contract TradeFinance {
         balanceSeller1 = orderAmountSeller.sub(freightrate);
         balanceSeller2 = orderAmountSeller.mul(customsDuty);
         balanceSeller3 = balanceSeller1.sub(balanceSeller2);
-        address(seller).transfer(balanceSeller3); // payout seller
+        address(seller).transfer(balanceSeller3);
         emit GuaranteeInactive("Guarantee is Inactive");
         guaranteestate = GuaranteeState.Inactive;
         return true;
@@ -255,10 +249,7 @@ contract TradeFinance {
         balanceCustoms1 = orderAmountSeller.sub(freightrate);
         balanceCustoms2 = balanceCustoms1.sub(balanceSeller3);
         require(address(this).balance >= balanceCustoms2);
-        address(customs).transfer(balanceCustoms2); // payout customs
-        if(address(this).balance >= 0) {
-            address(financier).transfer(address(this).balance); // refund rest to financier
-        }
+        address(customs).transfer(balanceCustoms2);
         return true;
     }
     
@@ -268,6 +259,7 @@ contract TradeFinance {
         buyer = address(0);
         freight = address(0);
         customs = address(0);
+        financier = address(0);
         guarantees[_guaranteeAddress].guaranteeAddress = bytes32(0);
         guarantees[_guaranteeAddress].orderAddress = bytes32(0);
         guarantees[_guaranteeAddress].to = address(0);
